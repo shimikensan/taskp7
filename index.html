@@ -22,6 +22,9 @@
         .animate-pop { animation: pop 0.2s ease-out; }
         @keyframes pop { 0% { transform: scale(0.98); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         * { border-radius: 0 !important; }
+        /* Hiệu ứng rung khi có báo động */
+        .alarm-active { animation: shake 0.5s infinite; background-color: #ef4444 !important; color: white !important; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 20% { transform: translate(-3px, 0px); } 40% { transform: translate(3px, 2px); } 60% { transform: translate(-3px, 1px); } 80% { transform: translate(3px, 1px); } 100% { transform: translate(1px, -2px); } }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen pb-24">
@@ -38,18 +41,22 @@
             </div>
         </div>
 
+        <div id="alarmBanner" class="hidden p-4 text-center z-50">
+            <button onclick="stopAlarm()" class="w-full py-4 bg-red-600 text-white font-black uppercase text-sm shadow-xl alarm-active">
+                <i class="fas fa-exclamation-triangle mr-2"></i> TẮT BÁO ĐỘNG (ĐANG QUÁ HẠN)
+            </button>
+        </div>
+
         <div id="dashboardSection" class="hidden p-6 border-b bg-gray-50 dark:bg-slate-800/50 animate-pop">
             <h2 class="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-[0.2em] text-center">Thống kê & Thùng rác</h2>
             <div class="w-44 h-44 mx-auto mb-6"><canvas id="taskChart"></canvas></div>
-            
-            <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
+            <div id="trashArea" class="mb-6 p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-[10px] font-black uppercase text-red-500"><i class="fas fa-trash-alt mr-1"></i> Thùng rác</span>
                     <button onclick="emptyTrash()" class="text-[9px] font-bold text-red-600 underline uppercase">Dọn sạch</button>
                 </div>
                 <div id="trashList" class="max-h-32 overflow-y-auto text-xs space-y-2"></div>
             </div>
-
             <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto">
                 <button onclick="exportBackup()" class="bg-green-600 text-white py-3 text-[10px] font-black uppercase"><i class="fas fa-file-export mr-1"></i> Sao lưu</button>
                 <label class="flex items-center justify-center bg-orange-500 text-white py-3 text-[10px] font-black uppercase cursor-pointer">
@@ -67,7 +74,7 @@
             <input type="text" id="assigneeInput" placeholder="Người thực hiện" class="w-full border px-4 py-2 outline-none text-sm font-medium">
             <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col"><label class="text-[9px] text-gray-500 font-black uppercase mb-1">Bắt đầu</label><input type="datetime-local" id="timeInput" class="border px-4 py-2 text-xs"></div>
-                <div class="flex flex-col"><label class="text-[9px] text-red-500 font-black uppercase mb-1 text-red-500">Hạn chót</label><input type="datetime-local" id="deadlineInput" class="border px-4 py-2 text-xs border-red-200 text-red-500 font-bold"></div>
+                <div class="flex flex-col"><label class="text-[9px] text-red-500 font-black uppercase mb-1">Hạn chót</label><input type="datetime-local" id="deadlineInput" class="border px-4 py-2 text-xs border-red-200 font-bold"></div>
             </div>
             <div class="flex gap-2 pt-2">
                 <select id="priorityInput" class="flex-1 border px-3 py-2 text-xs font-bold bg-gray-50"><option value="low">Ưu tiên: Thấp</option><option value="medium">Ưu tiên: Vừa</option><option value="high">Ưu tiên: Cao</option></select>
@@ -82,7 +89,7 @@
                     <input type="text" id="searchInput" oninput="render()" placeholder="Tìm kiếm..." class="w-full border pl-9 pr-4 py-2 text-xs outline-none focus:border-indigo-500 dark:bg-slate-800">
                 </div>
                 <div class="flex items-center gap-1 border px-2 bg-gray-50 dark:bg-slate-800">
-                    <span class="text-[9px] font-black uppercase text-gray-400 whitespace-nowrap">Lọc ngày:</span>
+                    <span class="text-[9px] font-black uppercase text-gray-400">Lọc ngày:</span>
                     <input type="date" id="dateFilter" onchange="render()" class="w-full bg-transparent text-xs py-1 outline-none">
                     <button onclick="resetDateFilter()" class="text-indigo-600 font-black text-[9px] uppercase ml-1">Xóa</button>
                 </div>
@@ -104,7 +111,7 @@
 
     <button onclick="toggleForm()" class="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white shadow-2xl flex items-center justify-center text-2xl z-50 ring-4 ring-white dark:ring-slate-800 active:scale-90 transition-transform"><i class="fas fa-plus" id="fabIcon"></i></button>
 
-    <audio id="alarmSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <audio id="alarmSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto" loop></audio>
 
     <script>
         let tasks = JSON.parse(localStorage.getItem('todo_pro_final')) || [];
@@ -117,6 +124,7 @@
         if (isDarkMode) document.body.classList.add('dark-mode');
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('vi-VN', {weekday:'long', day:'numeric', month:'long'});
 
+        // SW Logic
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(reg => {
                 reg.addEventListener('updatefound', () => {
@@ -182,12 +190,10 @@
             let filtered = tasks.filter(t => {
                 const matchesSearch = t.text.toLowerCase().includes(searchTerm) || (t.assignee && t.assignee.toLowerCase().includes(searchTerm));
                 if (!matchesSearch) return false;
-                
                 if (dateVal) {
                     const taskDate = t.time ? t.time.split('T')[0] : (t.deadline ? t.deadline.split('T')[0] : null);
                     if (taskDate !== dateVal) return false;
                 }
-
                 if (currentStatusFilter === 'active' && t.completed) return false;
                 if (currentStatusFilter === 'completed' && !t.completed) return false;
                 return true;
@@ -195,22 +201,18 @@
 
             filtered.forEach(task => {
                 const overdue = isOverdue(task.deadline) && !task.completed;
-                const priorityLabels = { low: 'Thấp', medium: 'Vừa', high: 'Cao' };
-                const priorityColors = { low: 'text-green-500', medium: 'text-amber-500', high: 'text-red-500' };
-
                 const div = document.createElement('div');
                 div.className = `p-5 priority-${task.priority} flex items-start gap-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition animate-pop`;
                 div.innerHTML = `
                     <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})" class="mt-1 w-6 h-6 accent-indigo-600 shrink-0">
                     <div class="flex-1 min-w-0">
-                        <div class="${task.completed ? 'task-done text-gray-400' : 'font-bold text-gray-800 dark:text-gray-100'} text-sm">
+                        <div class="${task.completed ? 'task-done text-gray-400' : 'font-bold text-gray-800 dark:text-gray-100'} text-sm leading-tight">
                             ${task.text} ${overdue ? '<span class="ml-2 text-[8px] bg-red-600 text-white px-2 py-0.5 font-black uppercase">Quá hạn</span>' : ''}
                         </div>
                         <div class="flex flex-col gap-1 mt-2 text-[9px] uppercase font-bold text-gray-400">
-                            <span>Ưu tiên: <span class="${priorityColors[task.priority]}">${priorityLabels[task.priority]}</span></span>
                             <span><i class="fas fa-user-circle mr-1"></i>${task.assignee || '---'}</span>
                             <span class="text-blue-500"><i class="fas fa-play mr-1"></i>Bắt đầu: ${task.time ? new Date(task.time).toLocaleString('vi-VN') : '---'}</span>
-                            <span class="${overdue ? 'text-red-600 font-black' : 'text-red-400 font-medium'}"><i class="fas fa-hourglass-end mr-1"></i>Hạn chót: ${task.deadline ? new Date(task.deadline).toLocaleString('vi-VN') : '---'}</span>
+                            <span class="${overdue ? 'text-red-600 font-black' : 'text-red-400'}"><i class="fas fa-hourglass-end mr-1"></i>Hạn chót: ${task.deadline ? new Date(task.deadline).toLocaleString('vi-VN') : '---'}</span>
                         </div>
                     </div>
                     <div class="flex gap-1"><button onclick="editTask(${task.id})" class="text-indigo-400 p-2"><i class="fas fa-pen"></i></button><button onclick="moveToTrash(${task.id})" class="text-red-300 p-2"><i class="fas fa-trash"></i></button></div>
@@ -221,67 +223,47 @@
             renderChart();
         }
 
-        function resetDateFilter() { document.getElementById('dateFilter').value = ''; render(); }
-
-        function moveToTrash(id) {
-            const index = tasks.findIndex(t => t.id === id);
-            const task = tasks.splice(index, 1)[0];
-            trash.unshift(task);
-            saveAndRender();
-        }
-
-        function renderTrash() {
-            const tList = document.getElementById('trashList');
-            tList.innerHTML = trash.length === 0 ? '<div class="text-gray-400 italic text-[10px]">Thùng rác trống</div>' : '';
-            trash.forEach((t, i) => {
-                const div = document.createElement('div');
-                div.className = "flex justify-between items-center p-2 bg-white dark:bg-slate-700 border dark:border-slate-600 mb-1";
-                div.innerHTML = `<span class="truncate mr-2 text-[10px]">${t.text}</span>
-                    <div class="flex gap-2">
-                        <button onclick="restoreTask(${i})" class="text-green-600 font-bold uppercase text-[8px]">Phục hồi</button>
-                        <button onclick="permanentDelete(${i})" class="text-red-500 font-bold uppercase text-[8px]">Xóa hẳn</button>
-                    </div>`;
-                tList.appendChild(div);
+        // Logic Báo động mới
+        function startAlarm() {
+            const sound = document.getElementById('alarmSound');
+            const banner = document.getElementById('alarmBanner');
+            sound.play().catch(() => {
+                console.log("Cần tương tác người dùng để phát âm thanh.");
             });
+            banner.classList.remove('hidden');
         }
 
-        function restoreTask(index) {
-            const task = trash.splice(index, 1)[0];
-            tasks.unshift(task);
-            saveAndRender();
-            renderTrash();
-        }
-
-        function permanentDelete(index) {
-            if(confirm("Xóa vĩnh viễn?")) { trash.splice(index, 1); saveAndRender(); renderTrash(); }
-        }
-
-        function emptyTrash() {
-            if(trash.length > 0 && confirm("Dọn sạch thùng rác?")) { trash = []; saveAndRender(); renderTrash(); }
-        }
-
-        function renderChart() {
-            const canvas = document.getElementById('taskChart');
-            if(!canvas || document.getElementById('dashboardSection').classList.contains('hidden')) return;
-            const onTime = tasks.filter(t => t.completed || !isOverdue(t.deadline)).length;
-            const overdue = tasks.filter(t => !t.completed && isOverdue(t.deadline)).length;
-            if (myChart) myChart.destroy();
-            myChart = new Chart(canvas, {
-                type: 'doughnut', data: {
-                    labels: ['Đúng hạn', 'Quá hạn'],
-                    datasets: [{ data: [onTime, overdue], backgroundColor: ['#4f46e5', '#ef4444'], borderWidth: 0 }]
-                },
-                options: { responsive: true, plugins: { legend: { display: false } }, cutout: '75%' }
+        function stopAlarm() {
+            const sound = document.getElementById('alarmSound');
+            const banner = document.getElementById('alarmBanner');
+            sound.pause();
+            sound.currentTime = 0; // Reset lại từ đầu
+            banner.classList.add('hidden');
+            
+            // Đánh dấu tất cả các task đã quá hạn là "đã thông báo" để không kêu lại ngay lập tức
+            tasks.forEach(t => {
+                if(t.deadline && !t.completed && isOverdue(t.deadline)) {
+                    t.notified = true;
+                }
             });
+            saveAndRender();
         }
 
         function isOverdue(deadline) { return deadline ? new Date(deadline) < new Date() : false; }
+
         function saveAndRender() { 
             localStorage.setItem('todo_pro_final', JSON.stringify(tasks)); 
             localStorage.setItem('todo_trash', JSON.stringify(trash));
             render(); 
         }
-        function toggleTask(id) { const idx = tasks.findIndex(t => t.id == id); tasks[idx].completed = !tasks[idx].completed; saveAndRender(); }
+
+        function toggleTask(id) { 
+            const idx = tasks.findIndex(t => t.id == id); 
+            tasks[idx].completed = !tasks[idx].completed; 
+            if(tasks[idx].completed) stopAlarm(); // Dừng chuông nếu hoàn thành công việc
+            saveAndRender(); 
+        }
+
         function editTask(id) {
             const task = tasks.find(t => t.id == id);
             document.getElementById('editId').value = task.id;
@@ -290,36 +272,41 @@
             document.getElementById('timeInput').value = task.time || '';
             document.getElementById('deadlineInput').value = task.deadline || '';
             document.getElementById('priorityInput').value = task.priority;
-            document.getElementById('btnAction').innerText = 'CẬP NHẬT';
+            document.getElementById('btnAction').innerText = 'CẬP NHẬT NHIỆM VỤ';
             if(document.getElementById('inputForm').classList.contains('hidden')) toggleForm();
         }
-        function resetForm() { ['editId','taskInput','assigneeInput','timeInput','deadlineInput'].forEach(i => document.getElementById(i).value = ''); }
+
+        function resetForm() { ['editId','taskInput','assigneeInput','timeInput','deadlineInput'].forEach(i => document.getElementById(i).value = ''); document.getElementById('btnAction').innerText = 'LƯU NHIỆM VỤ'; }
+        function resetDateFilter() { document.getElementById('dateFilter').value = ''; render(); }
         
-        function exportBackup() {
-            const dataStr = JSON.stringify(tasks, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-            const link = document.createElement('a'); link.setAttribute('href', dataUri);
-            link.setAttribute('download', `Backup_Tasks_${new Date().toISOString().slice(0,10)}.json`); link.click();
-        }
-        function importBackup(e) {
-            const file = e.target.files[0]; if(!file) return;
-            const r = new FileReader(); r.onload = (ev) => { tasks = JSON.parse(ev.target.result); saveAndRender(); location.reload(); };
-            r.readAsText(file);
-        }
         function setFilter(f) {
             currentStatusFilter = f;
             document.querySelectorAll('[id^="f-"]').forEach(b => b.className = 'flex-1 py-2 text-[9px] font-black text-gray-400 uppercase');
             document.getElementById('f-'+f).className = 'flex-1 py-2 text-[9px] font-black bg-indigo-600 text-white uppercase';
             render();
         }
+
+        // Kiểm tra quá hạn mỗi 30 giây
         setInterval(() => {
+            let hasNewOverdue = false;
             tasks.forEach(t => {
-                if(t.deadline && !t.completed && !t.notified && new Date() >= new Date(t.deadline)) {
-                    t.notified = true; document.getElementById('alarmSound').play();
-                    alert(`QUÁ HẠN: ${t.text}`); saveAndRender();
+                if(t.deadline && !t.completed && !t.notified && isOverdue(t.deadline)) {
+                    hasNewOverdue = true;
                 }
             });
-        }, 60000);
+            if (hasNewOverdue) startAlarm();
+        }, 30000);
+
+        // Các hàm phụ trợ khác (Chart, Trash, Backup...) giữ nguyên từ bản trước
+        function moveToTrash(id) { const index = tasks.findIndex(t => t.id === id); const task = tasks.splice(index, 1)[0]; trash.unshift(task); saveAndRender(); }
+        function renderTrash() { const tList = document.getElementById('trashList'); tList.innerHTML = trash.length === 0 ? '<div class="text-gray-400 italic text-[10px]">Thùng rác trống</div>' : ''; trash.forEach((t, i) => { const div = document.createElement('div'); div.className = "flex justify-between items-center p-2 bg-white dark:bg-slate-700 border dark:border-slate-600 mb-1"; div.innerHTML = `<span class="truncate mr-2 text-[10px]">${t.text}</span><div class="flex gap-2"><button onclick="restoreTask(${i})" class="text-green-600 font-bold uppercase text-[8px]">Phục hồi</button><button onclick="permanentDelete(${i})" class="text-red-500 font-bold uppercase text-[8px]">Xóa hẳn</button></div>`; tList.appendChild(div); }); }
+        function restoreTask(index) { const task = trash.splice(index, 1)[0]; tasks.unshift(task); saveAndRender(); renderTrash(); }
+        function permanentDelete(index) { if(confirm("Xóa vĩnh viễn?")) { trash.splice(index, 1); saveAndRender(); renderTrash(); } }
+        function emptyTrash() { if(trash.length > 0 && confirm("Dọn sạch thùng rác?")) { trash = []; saveAndRender(); renderTrash(); } }
+        function renderChart() { const canvas = document.getElementById('taskChart'); if(!canvas || document.getElementById('dashboardSection').classList.contains('hidden')) return; const onTime = tasks.filter(t => t.completed || !isOverdue(t.deadline)).length; const overdue = tasks.filter(t => !t.completed && isOverdue(t.deadline)).length; if (myChart) myChart.destroy(); myChart = new Chart(canvas, { type: 'doughnut', data: { labels: ['Đúng hạn', 'Quá hạn'], datasets: [{ data: [onTime, overdue], backgroundColor: ['#4f46e5', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, plugins: { legend: { display: false } }, cutout: '75%' } }); }
+        function exportBackup() { const dataStr = JSON.stringify(tasks, null, 2); const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr); const link = document.createElement('a'); link.setAttribute('href', dataUri); link.setAttribute('download', `Backup_Tasks_${new Date().toISOString().slice(0,10)}.json`); link.click(); }
+        function importBackup(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => { try { tasks = JSON.parse(ev.target.result); saveAndRender(); location.reload(); } catch(err) { alert("File lỗi!"); } }; r.readAsText(file); }
+
         render();
     </script>
 </body>
