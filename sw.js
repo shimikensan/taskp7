@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pro-tasks-square-v3'; // Tăng số này lên khi bạn upload code mới
+const CACHE_NAME = 'pro-tasks-vb-v4'; // Nhớ tăng số này để cập nhật
 const assets = [
   './',
   './index.html',
