@@ -60,13 +60,13 @@
 
             <div class="space-y-3 max-w-xs mx-auto">
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="exportBackup()" class="bg-green-600 text-white py-3 text-[10px] font-black uppercase"><i class="fas fa-file-export mr-1"></i> Sao lưu</button>
-                    <label class="flex items-center justify-center bg-orange-500 text-white py-3 text-[10px] font-black uppercase cursor-pointer">
+                    <button onclick="exportBackup()" class="bg-green-600 text-white py-3 text-[10px] font-black uppercase tracking-widest"><i class="fas fa-file-export mr-1"></i> Sao lưu</button>
+                    <label class="flex items-center justify-center bg-orange-500 text-white py-3 text-[10px] font-black uppercase cursor-pointer tracking-widest">
                         <i class="fas fa-file-import mr-1"></i> Khôi phục
                         <input type="file" id="importFile" class="hidden" onchange="importBackup(event)" accept=".json">
                     </label>
                 </div>
-                <button onclick="checkUpdateManual()" class="w-full bg-indigo-500 text-white py-3 text-[10px] font-black uppercase tracking-widest">
+                <button onclick="checkUpdateManual()" class="w-full bg-indigo-500 text-white py-3 text-[10px] font-black uppercase tracking-widest shadow-md">
                     <i class="fas fa-sync-alt mr-2"></i> Kiểm tra cập nhật phần mềm
                 </button>
             </div>
@@ -82,17 +82,20 @@
                 <div class="flex flex-col"><label class="text-[9px] text-gray-500 font-black uppercase mb-1">Bắt đầu</label><input type="datetime-local" id="timeInput" class="border px-4 py-2 text-xs"></div>
                 <div class="flex flex-col"><label class="text-[9px] text-red-500 font-black uppercase mb-1">Hạn chót</label><input type="datetime-local" id="deadlineInput" class="border px-4 py-2 text-xs border-red-200 font-bold"></div>
             </div>
-            <button onclick="handleTask()" id="btnAction" class="w-full bg-indigo-600 text-white font-black py-3 shadow-lg text-sm uppercase tracking-widest">Lưu nhiệm vụ</button>
+            <div class="flex gap-2 pt-2">
+                <select id="priorityInput" class="flex-1 border px-3 py-2 text-xs font-bold bg-gray-50"><option value="low">Thấp</option><option value="medium">Vừa</option><option value="high">Cao</option></select>
+                <button onclick="handleTask()" id="btnAction" class="flex-[2] bg-indigo-600 text-white font-black py-3 shadow-lg text-sm uppercase tracking-widest">Lưu nhiệm vụ</button>
+            </div>
         </div>
 
-        <div class="bg-white dark:bg-slate-900 p-3 border-b space-y-3 shadow-sm">
+        <div class="bg-white dark:bg-slate-900 p-3 border-b space-y-3">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div class="relative">
                     <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                     <input type="text" id="searchInput" oninput="render()" placeholder="Tìm kiếm..." class="w-full border pl-9 pr-4 py-2 text-xs outline-none focus:border-indigo-500 dark:bg-slate-800">
                 </div>
                 <div class="flex items-center gap-1 border px-2 bg-gray-50 dark:bg-slate-800">
-                    <span class="text-[9px] font-black uppercase text-gray-400">Lọc ngày:</span>
+                    <span class="text-[9px] font-black uppercase text-gray-400">Ngày:</span>
                     <input type="date" id="dateFilter" onchange="render()" class="w-full bg-transparent text-xs py-1 outline-none">
                     <button onclick="resetDateFilter()" class="text-indigo-600 font-black text-[9px] uppercase ml-1">Xóa</button>
                 </div>
@@ -110,7 +113,7 @@
             <p id="taskCount" class="text-[10px] font-black text-gray-400 uppercase tracking-widest">0 NHIỆM VỤ</p>
             <div class="flex items-center gap-2">
                 <span class="text-[11px] font-black text-indigo-500 tracking-widest uppercase">© VB Design</span>
-                <span class="text-[8px] font-bold text-gray-400 bg-gray-200 dark:bg-slate-800 px-1.5 py-0.5 uppercase">v1.2</span>
+                <span class="text-[8px] font-bold text-gray-400 bg-gray-200 dark:bg-slate-800 px-1.5 py-0.5">v1.2</span>
             </div>
         </div>
     </div>
@@ -137,7 +140,7 @@
         if (isDarkMode) document.body.classList.add('dark-mode');
         document.getElementById('date-display').innerText = new Date().toLocaleDateString('vi-VN', {weekday:'long', day:'numeric', month:'long'});
 
-        // Service Worker Registration
+        // SW Logic
         let newWorker;
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(reg => {
@@ -153,20 +156,16 @@
             });
         }
 
-        // HÀM KIỂM TRA CẬP NHẬT CHỦ ĐỘNG
         function checkUpdateManual() {
             if (swRegistration) {
-                alert("Đang kiểm tra phiên bản mới từ máy chủ...");
+                alert("Đang kiểm tra phiên bản mới...");
                 swRegistration.update().then(() => {
-                    // Nếu sau khi update mà không thấy banner hiện ra
                     setTimeout(() => {
                         if (document.getElementById('updateBanner').classList.contains('hidden')) {
-                            alert("Bạn đang sử dụng phiên bản mới nhất.");
+                            alert("Bạn đang sử dụng bản mới nhất.");
                         }
                     }, 2000);
                 });
-            } else {
-                alert("Hệ thống PWA chưa sẵn sàng.");
             }
         }
 
@@ -189,6 +188,7 @@
             const form = document.getElementById('inputForm');
             const isHidden = form.classList.toggle('hidden');
             document.getElementById('fabIcon').className = isHidden ? 'fas fa-plus' : 'fas fa-minus';
+            if (isHidden) resetForm();
         }
 
         function handleTask() {
@@ -206,7 +206,7 @@
             };
             if (id) {
                 const idx = tasks.findIndex(t => t.id == id);
-                tasks[idx] = { ...tasks[idx], ...taskData };
+                if (idx !== -1) tasks[idx] = { ...tasks[idx], ...taskData };
             } else { tasks.unshift(taskData); }
             saveAndRender();
             toggleForm();
@@ -242,9 +242,9 @@
                             ${task.text} ${overdue ? '<span class="ml-2 text-[8px] bg-red-600 text-white px-2 py-0.5 font-black uppercase">Quá hạn</span>' : ''}
                         </div>
                         <div class="flex flex-col gap-1 mt-2 text-[9px] uppercase font-bold text-gray-400">
-                            <span><i class="fas fa-user-circle mr-1"></i>${task.assignee || '---'}</span>
-                            <span class="text-blue-500 font-medium"><i class="fas fa-play mr-1"></i>Bắt đầu: ${task.time ? new Date(task.time).toLocaleString('vi-VN') : '---'}</span>
-                            <span class="${overdue ? 'text-red-600 font-black' : 'text-red-400'}"><i class="fas fa-hourglass-end mr-1"></i>Hạn chót: ${task.deadline ? new Date(task.deadline).toLocaleString('vi-VN') : '---'}</span>
+                            <span><i class="fas fa-user-circle mr-1 text-[8px]"></i>${task.assignee || '---'}</span>
+                            <span class="text-blue-500"><i class="fas fa-play mr-1 text-[8px]"></i>Bắt đầu: ${task.time ? new Date(task.time).toLocaleString('vi-VN') : '---'}</span>
+                            <span class="${overdue ? 'text-red-600 font-black' : 'text-red-400'}"><i class="fas fa-hourglass-end mr-1 text-[8px]"></i>Hạn chót: ${task.deadline ? new Date(task.deadline).toLocaleString('vi-VN') : '---'}</span>
                         </div>
                     </div>
                     <div class="flex gap-1"><button onclick="editTask(${task.id})" class="text-indigo-400 p-2"><i class="fas fa-pen"></i></button><button onclick="moveToTrash(${task.id})" class="text-red-300 p-2"><i class="fas fa-trash"></i></button></div>
@@ -279,18 +279,42 @@
             const idx = tasks.findIndex(t => t.id == id); tasks[idx].completed = !tasks[idx].completed; 
             if(tasks[idx].completed) stopAlarm(); saveAndRender(); 
         }
+
+        // HÀM SỬA LỖI NÚT SỬA
         function editTask(id) {
             const task = tasks.find(t => t.id == id);
+            if (!task) return;
+            
+            // 1. Mở form trước
+            const form = document.getElementById('inputForm');
+            if(form.classList.contains('hidden')) {
+                form.classList.remove('hidden');
+                document.getElementById('fabIcon').className = 'fas fa-minus';
+            }
+            
+            // 2. Điền dữ liệu
             document.getElementById('editId').value = task.id;
             document.getElementById('taskInput').value = task.text;
             document.getElementById('assigneeInput').value = task.assignee || '';
             document.getElementById('timeInput').value = task.time || '';
             document.getElementById('deadlineInput').value = task.deadline || '';
-            document.getElementById('priorityInput').value = task.priority;
+            document.getElementById('priorityInput').value = task.priority || 'low';
+            
+            // 3. Đổi tên nút hành động
             document.getElementById('btnAction').innerText = 'CẬP NHẬT NHIỆM VỤ';
-            if(document.getElementById('inputForm').classList.contains('hidden')) toggleForm();
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
-        function resetForm() { ['editId','taskInput','assigneeInput','timeInput','deadlineInput'].forEach(i => document.getElementById(i).value = ''); document.getElementById('btnAction').innerText = 'LƯU NHIỆM VỤ'; }
+
+        function resetForm() { 
+            document.getElementById('editId').value = '';
+            document.getElementById('taskInput').value = '';
+            document.getElementById('assigneeInput').value = '';
+            document.getElementById('timeInput').value = '';
+            document.getElementById('deadlineInput').value = '';
+            document.getElementById('priorityInput').value = 'low';
+            document.getElementById('btnAction').innerText = 'LƯU NHIỆM VỤ'; 
+        }
+
         function resetDateFilter() { document.getElementById('dateFilter').value = ''; render(); }
         function setFilter(f) {
             currentStatusFilter = f;
@@ -304,7 +328,7 @@
         function permanentDelete(index) { if(confirm("Xóa vĩnh viễn?")) { trash.splice(index, 1); saveAndRender(); renderTrash(); } }
         function emptyTrash() { if(trash.length > 0 && confirm("Dọn sạch?")) { trash = []; saveAndRender(); renderTrash(); } }
         function renderChart() { const canvas = document.getElementById('taskChart'); if(!canvas || document.getElementById('dashboardSection').classList.contains('hidden')) return; const onTime = tasks.filter(t => t.completed || !isOverdue(t.deadline)).length; const overdue = tasks.filter(t => !t.completed && isOverdue(t.deadline)).length; if (myChart) myChart.destroy(); myChart = new Chart(canvas, { type: 'doughnut', data: { labels: ['Đúng hạn', 'Quá hạn'], datasets: [{ data: [onTime, overdue], backgroundColor: ['#4f46e5', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, plugins: { legend: { display: false } }, cutout: '75%' } }); }
-        function exportBackup() { const dataStr = JSON.stringify(tasks, null, 2); const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr); const link = document.createElement('a'); link.setAttribute('href', dataUri); link.setAttribute('download', `VB_Tasks_Backup_${new Date().toISOString().slice(0,10)}.json`); link.click(); }
+        function exportBackup() { const dataStr = JSON.stringify(tasks, null, 2); const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr); const link = document.createElement('a'); link.setAttribute('href', dataUri); link.setAttribute('download', `VB_Backup_${new Date().toISOString().slice(0,10)}.json`); link.click(); }
         function importBackup(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = (ev) => { try { tasks = JSON.parse(ev.target.result); saveAndRender(); location.reload(); } catch(err) { alert("Lỗi file!"); } }; r.readAsText(file); }
 
         setInterval(() => {
