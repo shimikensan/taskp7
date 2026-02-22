@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pro-tasks-vb-v1.2'; 
+const CACHE_NAME = 'pro-tasks-vb-v1.5'; 
 
 const assets = [
   './',
