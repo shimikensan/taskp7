@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Tasks VB Design v1.2.3</title>
+    <title>Pro Tasks VB Design v1.2.4</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,9 +35,9 @@
                 <p id="date-display" class="text-[10px] opacity-80 capitalize font-bold tracking-widest mt-1"></p>
             </div>
             <div class="flex gap-1">
-                <button onclick="toggleDashboard()" class="p-3 bg-white/10 hover:bg-white/30 transition"><i class="fas fa-chart-pie"></i></button>
-                <button onclick="toggleTrash()" class="p-3 bg-white/10 hover:bg-white/30 transition"><i class="fas fa-trash-alt"></i></button>
-                <button onclick="toggleDarkMode()" class="p-3 bg-white/10 hover:bg-white/30 transition"><i id="darkIcon" class="fas fa-moon"></i></button>
+                <button onclick="toggleDashboard()" title="Thống kê" class="p-3 bg-white/10 hover:bg-white/30 transition"><i class="fas fa-chart-pie"></i></button>
+                <button onclick="toggleTrash()" title="Thùng rác" class="p-3 bg-white/10 hover:bg-white/30 transition"><i class="fas fa-trash-alt"></i></button>
+                <button onclick="toggleDarkMode()" title="Chế độ tối" class="p-3 bg-white/10 hover:bg-white/30 transition"><i id="darkIcon" class="fas fa-moon"></i></button>
             </div>
         </div>
 
@@ -77,6 +77,7 @@
         <div id="inputForm" class="hidden p-5 border-b space-y-3 bg-indigo-50 dark:bg-slate-700/30 animate-pop">
             <input type="hidden" id="editId">
             <input type="text" id="taskInput" placeholder="Nội dung nhiệm vụ..." class="w-full border px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-gray-800 dark:text-white">
+            
             <div class="grid grid-cols-2 gap-3">
                 <input type="text" id="assigneeInput" placeholder="Người thực hiện" class="w-full border px-4 py-2 outline-none text-xs">
                 <select id="priorityInput" class="w-full border px-4 py-2 text-xs outline-none">
@@ -85,6 +86,22 @@
                     <option value="high">Ưu tiên: Cao</option>
                 </select>
             </div>
+
+            <div class="grid grid-cols-1 gap-3">
+                <div class="flex flex-col">
+                    <label class="text-[9px] text-indigo-500 font-black uppercase mb-1">Lặp lại nhiệm vụ</label>
+                    <select id="repeatInput" class="w-full border px-4 py-2 text-xs outline-none bg-white">
+                        <option value="none">Không nhắc lại</option>
+                        <option value="daily">Hàng ngày</option>
+                        <option value="weekly">Hàng tuần</option>
+                        <option value="monthly">Hàng tháng</option>
+                        <option value="quarterly">Hàng quý (3 tháng)</option>
+                        <option value="halfyear">6 tháng một lần</option>
+                        <option value="yearly">1 năm một lần</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col"><label class="text-[9px] text-gray-500 font-black uppercase mb-1">Bắt đầu</label><input type="datetime-local" id="timeInput" class="border px-4 py-2 text-xs"></div>
                 <div class="flex flex-col"><label class="text-[9px] text-red-500 font-black uppercase mb-1">Hạn chót</label><input type="datetime-local" id="deadlineInput" class="border px-4 py-2 text-xs border-red-200"></div>
@@ -114,7 +131,7 @@
             <p id="taskCount" class="text-[10px] font-black text-gray-400 uppercase tracking-widest">0 NHIỆM VỤ</p>
             <div class="flex items-center gap-2">
                 <span class="text-[11px] font-black text-indigo-500 tracking-widest uppercase">© VB Design</span>
-                <span class="text-[8px] font-bold text-gray-400 bg-gray-200 dark:bg-slate-800 px-1.5 py-0.5">v1.2.3</span>
+                <span class="text-[8px] font-bold text-gray-400 bg-gray-200 dark:bg-slate-800 px-1.5 py-0.5">v1.2.4</span>
             </div>
         </div>
     </div>
@@ -210,6 +227,7 @@
                 time: document.getElementById('timeInput').value || '',
                 deadline: document.getElementById('deadlineInput').value || '',
                 priority: document.getElementById('priorityInput').value || 'low',
+                repeat: document.getElementById('repeatInput').value || 'none',
                 completed: false,
                 notified: false
             };
@@ -248,11 +266,18 @@
                 const overdue = isOverdue(task.deadline) && !task.completed;
                 const div = document.createElement('div');
                 div.className = `p-5 priority-${task.priority} flex items-start gap-4 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition animate-pop border-b dark:border-slate-700`;
+                
+                let repeatText = "";
+                if(task.repeat !== 'none') {
+                    const map = {daily:'Ngày', weekly:'Tuần', monthly:'Tháng', quarterly:'Quý', halfyear:'6 tháng', yearly:'Năm'};
+                    repeatText = `<span class="ml-2 text-[8px] bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 px-1.5 py-0.5 font-bold uppercase"><i class="fas fa-sync-alt mr-1"></i>Hàng ${map[task.repeat]}</span>`;
+                }
+
                 div.innerHTML = `
                     <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})" class="mt-1 w-6 h-6 accent-indigo-600 shrink-0">
                     <div class="flex-1 min-w-0">
-                        <div class="${task.completed ? 'task-done text-gray-400' : 'font-bold text-gray-800 dark:text-gray-100'} text-sm leading-tight">
-                            ${task.text} ${overdue ? '<span class="ml-2 text-[8px] bg-red-600 text-white px-2 py-0.5 font-black uppercase">Quá hạn</span>' : ''}
+                        <div class="${task.completed ? 'task-done text-gray-400' : 'font-bold text-gray-800 dark:text-gray-100'} text-sm leading-tight flex items-center flex-wrap gap-y-1">
+                            ${task.text} ${repeatText} ${overdue ? '<span class="ml-2 text-[8px] bg-red-600 text-white px-2 py-0.5 font-black uppercase">Quá hạn</span>' : ''}
                         </div>
                         <div class="flex flex-col gap-1 mt-2 text-[9px] uppercase font-bold text-gray-400">
                             <span><i class="fas fa-user-circle mr-1 text-[8px]"></i>${task.assignee || 'Không tên'}</span>
@@ -266,6 +291,56 @@
             });
             document.getElementById('taskCount').innerText = `${filtered.length} NHIỆM VỤ`;
             renderChart();
+        }
+
+        function toggleTask(id) {
+            const idx = tasks.findIndex(t => t.id == id);
+            const task = tasks[idx];
+            task.completed = !task.completed;
+            
+            // Nếu hoàn thành một nhiệm vụ có tính lặp lại
+            if (task.completed && task.repeat !== 'none') {
+                createNewRecurringTask(task);
+            }
+
+            if(task.completed) stopAlarm();
+            saveAndRender();
+        }
+
+        function createNewRecurringTask(oldTask) {
+            if (!oldTask.deadline) return;
+            
+            let nextDeadline = new Date(oldTask.deadline);
+            let nextStartTime = oldTask.time ? new Date(oldTask.time) : null;
+
+            const addMap = {
+                daily: 1,
+                weekly: 7,
+                monthly: 1, // sử dụng Month
+                quarterly: 3,
+                halfyear: 6,
+                yearly: 12
+            };
+
+            const type = oldTask.repeat;
+            if (type === 'daily' || type === 'weekly') {
+                nextDeadline.setDate(nextDeadline.getDate() + addMap[type]);
+                if (nextStartTime) nextStartTime.setDate(nextStartTime.getDate() + addMap[type]);
+            } else {
+                nextDeadline.setMonth(nextDeadline.getMonth() + (addMap[type] || 0));
+                if (nextStartTime) nextStartTime.setMonth(nextStartTime.setMonth() + (addMap[type] || 0));
+            }
+
+            const newTask = {
+                ...oldTask,
+                id: Date.now(),
+                completed: false,
+                notified: false,
+                deadline: nextDeadline.toISOString().slice(0, 16),
+                time: nextStartTime ? nextStartTime.toISOString().slice(0, 16) : ''
+            };
+            
+            tasks.unshift(newTask);
         }
 
         function confirmDelete(id, text) { if (confirm(`Xóa nhiệm vụ: "${text}"?\n(Sẽ vào thùng rác)`)) moveToTrash(id); }
@@ -300,8 +375,6 @@
             render(); 
         }
 
-        function toggleTask(id) { const idx = tasks.findIndex(t => t.id == id); tasks[idx].completed = !tasks[idx].completed; if(tasks[idx].completed) stopAlarm(); saveAndRender(); }
-        
         function editTask(id) {
             const task = tasks.find(t => t.id == id); if (!task) return;
             const form = document.getElementById('inputForm'); if(form.classList.contains('hidden')) { form.classList.remove('hidden'); document.getElementById('fabIcon').className = 'fas fa-minus'; }
@@ -311,11 +384,12 @@
             document.getElementById('timeInput').value = task.time || ''; 
             document.getElementById('deadlineInput').value = task.deadline || ''; 
             document.getElementById('priorityInput').value = task.priority || 'low';
+            document.getElementById('repeatInput').value = task.repeat || 'none';
             document.getElementById('btnAction').innerText = 'CẬP NHẬT NHIỆM VỤ'; 
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function resetForm() { document.getElementById('editId').value = ''; ['taskInput','assigneeInput','timeInput','deadlineInput'].forEach(i => document.getElementById(i).value = ''); document.getElementById('priorityInput').value = 'low'; document.getElementById('btnAction').innerText = 'LƯU NHIỆM VỤ'; }
+        function resetForm() { document.getElementById('editId').value = ''; ['taskInput','assigneeInput','timeInput','deadlineInput'].forEach(i => document.getElementById(i).value = ''); document.getElementById('priorityInput').value = 'low'; document.getElementById('repeatInput').value = 'none'; document.getElementById('btnAction').innerText = 'LƯU NHIỆM VỤ'; }
         function resetDateFilter() { document.getElementById('dateFilter').value = ''; render(); }
         function setFilter(f) { currentStatusFilter = f; document.querySelectorAll('[id^="f-"]').forEach(b => b.className = 'flex-1 py-2 text-[9px] font-black text-gray-400 uppercase tracking-tighter'); document.getElementById('f-'+f).className = 'flex-1 py-2 text-[9px] font-black bg-indigo-600 text-white uppercase tracking-tighter'; render(); }
         
